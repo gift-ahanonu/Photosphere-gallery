@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Interactive Photosphere Gallery</title>
+    <meta
+      name="description"
+      content="Experience breathtaking 360° panoramas from around the world"
+    />
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <style>
+      .scene-info {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        max-width: 400px;
+        z-index: 999;
+        font-family: Arial, sans-serif;
+      }
+
+      .scene-info h2 {
+        margin-top: 0;
+        font-size: 1.5em;
+      }
+
+      .scene-info p {
+        margin-bottom: 0;
+        font-size: 1em;
+        line-height: 1.4;
+      }
+
+      .navigation-helper {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        z-index: 999;
+        font-family: Arial, sans-serif;
+      }
+
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+      }
+
+      .gallery-menu {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        z-index: 999;
+        font-family: Arial, sans-serif;
+      }
+
+      .gallery-menu button {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 8px 12px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+
+      .navigation-controls {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        z-index: 999;
+        font-family: Arial, sans-serif;
+        display: flex;
+        gap: 10px;
+      }
+
+      .navigation-controls button {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .navigation-controls button:hover {
+        background-color: #45a049;
+      }
+
+      .navigation-controls button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+    </style>
+    <script>
+      // Navigation
+      let navigationHistory = [];
+      let currentScene = "louvre";
+
+      // Scene order
+      const sceneOrder = [
+        "louvre",
+        "city",
+        "lake",
+        "beach",
+        "canyon",
+        "venice",
+        "radar",
+        "vineyard",
+      ];
+
+      // Scene descriptions
+      const sceneDescriptions = {
+        louvre: {
+          title: "The Louvre Museum, Paris",
+          description:
+            "The iconic Louvre Museum in Paris, featuring the famous glass pyramid. This historic palace houses one of the world's largest art collections, including the Mona Lisa.",
+        },
+        city: {
+          title: "City Sunset Panorama",
+          description:
+            "A breathtaking view of a city skyline at sunset. The warm colors of the setting sun illuminate the urban landscape, creating a stunning contrast between the buildings and the sky.",
+        },
+        lake: {
+          title: "Lake Marina View",
+          description:
+            "A serene view of a lake marina with mountains in the background. The clear blue water reflects the sky, while the dock provides access to the peaceful waters.",
+        },
+        beach: {
+          title: "Tropical Paradise",
+          description:
+            "Crystal clear turquoise waters meet a pristine white sand beach. Small boats float on the gentle waves, and a small island with palm trees creates the perfect tropical getaway scene.",
+        },
+        canyon: {
+          title: "Horseshoe Bend, Arizona",
+          description:
+            "The famous Horseshoe Bend where the Colorado River makes a dramatic 270-degree turn. The red rock formations and deep canyon create one of nature's most spectacular views.",
+        },
+        venice: {
+          title: "Venice Canals, Italy",
+          description:
+            "Experience Venice from a gondola perspective. The historic buildings line the famous canals, showcasing the unique architecture and charm of this floating city.",
+        },
+        radar: {
+          title: "Abandoned Radar Station",
+          description:
+            "An abandoned radar station with distinctive dome structures. This mysterious location has a post-apocalyptic feel with its deteriorating structures against the backdrop of a clear sky.",
+        },
+        vineyard: {
+          title: "Countryside Vineyard",
+          description:
+            "Rolling hills covered with grapevines stretch toward the horizon. This picturesque vineyard landscape captures the essence of wine country with its orderly rows of vines under a bright blue sky.",
+        },
+      };
+
+      // Function to show a specific scene
+      function showScene(sceneName) {
+        if (currentScene && currentScene !== sceneName) {
+          navigationHistory.push(currentScene);
+        }
+
+        document.querySelectorAll('a-entity[id$="-scene"]').forEach((scene) => {
+          scene.setAttribute("visible", false);
+        });
+
+        document
+          .getElementById(sceneName + "-scene")
+          .setAttribute("visible", true);
+
+        const sceneInfo = sceneDescriptions[sceneName];
+        document.getElementById("sceneTitle").textContent = sceneInfo.title;
+        document.getElementById("sceneDescription").textContent =
+          sceneInfo.description;
+
+        currentScene = sceneName;
+
+        document.getElementById("prevButton").disabled =
+          navigationHistory.length === 0;
+
+        updateNavigationPointLabels();
+      }
+
+      // Function to go to previous scene
+      function goToPreviousScene() {
+        if (navigationHistory.length > 0) {
+          const previousScene = navigationHistory.pop();
+
+          document
+            .querySelectorAll('a-entity[id$="-scene"]')
+            .forEach((scene) => {
+              scene.setAttribute("visible", false);
+            });
+
+          document
+            .getElementById(previousScene + "-scene")
+            .setAttribute("visible", true);
+
+          const sceneInfo = sceneDescriptions[previousScene];
+          document.getElementById("sceneTitle").textContent = sceneInfo.title;
+          document.getElementById("sceneDescription").textContent =
+            sceneInfo.description;
+          currentScene = previousScene;
+          document.getElementById("prevButton").disabled =
+            navigationHistory.length === 0;
+
+          updateNavigationPointLabels();
+        }
+      }
+
+      // Function to go to next scene
+      function goToNextScene() {
+        const currentIndex = sceneOrder.indexOf(currentScene);
+        const nextIndex = (currentIndex + 1) % sceneOrder.length;
+        showScene(sceneOrder[nextIndex]);
+      }
+
+      // Function to go to previous scene
+      function goToPreviousSceneInOrder() {
+        const currentIndex = sceneOrder.indexOf(currentScene);
+        const prevIndex =
+          (currentIndex - 1 + sceneOrder.length) % sceneOrder.length;
+        showScene(sceneOrder[prevIndex]);
+      }
+
+      // Function to update navigation point labels
+      function updateNavigationPointLabels() {
+        const currentIndex = sceneOrder.indexOf(currentScene);
+        const prevIndex =
+          (currentIndex - 1 + sceneOrder.length) % sceneOrder.length;
+        const nextIndex = (currentIndex + 1) % sceneOrder.length;
+
+        const prevScene = sceneOrder[prevIndex];
+        const nextScene = sceneOrder[nextIndex];
+
+        // Update the text labels
+        const prevSceneLabel = document.getElementById("prev-scene-label");
+        const nextSceneLabel = document.getElementById("next-scene-label");
+
+        if (prevSceneLabel && nextSceneLabel) {
+          prevSceneLabel.setAttribute(
+            "value",
+            sceneDescriptions[prevScene].title
+          );
+          nextSceneLabel.setAttribute(
+            "value",
+            sceneDescriptions[nextScene].title
+          );
+        }
+      }
+
+      // Hide loading screen when everything is loaded
+      window.addEventListener("load", function () {
+        setTimeout(function () {
+          document.getElementById("loadingScreen").style.display = "none";
+          updateNavigationPointLabels();
+        }, 2000);
+      });
+
+      AFRAME.registerComponent("event-set__mouseenter", {
+        schema: {
+          default: "",
+          parse: function (value) {
+            return value;
+          },
+        },
+        init: function () {
+          var self = this;
+          var data = this.data;
+          var el = this.el;
+
+          el.addEventListener("mouseenter", function () {
+            var properties = data.split(";");
+            properties.forEach(function (property) {
+              if (property.trim() !== "") {
+                var keyValue = property.split(":");
+                if (keyValue.length === 2) {
+                  var key = keyValue[0].trim();
+                  var value = keyValue[1].trim();
+
+                  if (key.startsWith("material.")) {
+                    var materialProperty = key.substring(9);
+                    el.setAttribute("material", materialProperty, value);
+                  }
+                }
+              }
+            });
+          });
+        },
+      });
+
+      AFRAME.registerComponent("event-set__mouseleave", {
+        schema: {
+          default: "",
+          parse: function (value) {
+            return value;
+          },
+        },
+        init: function () {
+          var self = this;
+          var data = this.data;
+          var el = this.el;
+
+          el.addEventListener("mouseleave", function () {
+            var properties = data.split(";");
+            properties.forEach(function (property) {
+              if (property.trim() !== "") {
+                var keyValue = property.split(":");
+                if (keyValue.length === 2) {
+                  var key = keyValue[0].trim();
+                  var value = keyValue[1].trim();
+
+                  if (key.startsWith("material.")) {
+                    var materialProperty = key.substring(9);
+                    el.setAttribute("material", materialProperty, value);
+                  }
+                }
+              }
+            });
+          });
+        },
+      });
+    </script>
+  </head>
+  <body>
+    <div class="loading-screen" id="loadingScreen">
+      <div>Loading Photosphere Gallery...</div>
+    </div>
+
+    <div class="scene-info" id="sceneInfo">
+      <h2 id="sceneTitle">Welcome to the Photosphere Gallery</h2>
+      <p id="sceneDescription">
+        Look for the glowing orbs to navigate between different 360° panoramas.
+        Use your mouse to look around or your mobile device's gyroscope.
+      </p>
+    </div>
+
+    <div class="navigation-helper">Look for glowing spheres to navigate</div>
+
+    <div class="gallery-menu">
+      <button onclick="showScene('louvre')">Louvre</button>
+      <button onclick="showScene('city')">City Sunset</button>
+      <button onclick="showScene('lake')">Lake View</button>
+      <button onclick="showScene('beach')">Tropical Beach</button>
+      <button onclick="showScene('canyon')">Horseshoe Bend</button>
+      <button onclick="showScene('venice')">Venice</button>
+      <button onclick="showScene('radar')">Radar Station</button>
+      <button onclick="showScene('vineyard')">Vineyard</button>
+    </div>
+
+    <div class="navigation-controls">
+      <button onclick="goToPreviousSceneInOrder()">◀ Back</button>
+      <button onclick="goToNextScene()">Next ▶</button>
+    </div>
+
+    <a-scene loading-screen="enabled: false">
+      <a-assets>
+        <!-- Photosphere Images -->
+        <img
+          id="louvre-img"
+          src="assets\img\louvre.jpg"
+          crossorigin="anonymous"
+        />
+        <img
+          id="city-img"
+          src="assets\img\citysunset.jpg"
+          crossorigin="anonymous"
+        />
+        <img id="lake-img" src="assets\img\lake.jpg" crossorigin="anonymous" />
+        <img
+          id="beach-img"
+          src="assets\img\beach.jpg"
+          crossorigin="anonymous"
+        />
+        <img
+          id="canyon-img"
+          src="assets\img\horseshoebend.jpg"
+          crossorigin="anonymous"
+        />
+        <img
+          id="venice-img"
+          src="assets\img\venice.jpeg"
+          crossorigin="anonymous"
+        />
+        <img
+          id="radar-img"
+          src="assets\img\radarstation.jpg"
+          crossorigin="anonymous"
+        />
+        <img
+          id="vineyard-img"
+          src="assets\img\vineyard.jpg"
+          crossorigin="anonymous"
+        />
+
+        <!-- Navigation Point Texture -->
+        <img
+          id="nav-texture"
+          src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+          crossorigin="anonymous"
+        />
+      </a-assets>
+
+      <!-- Camera and Cursor -->
+      <a-entity id="rig" position="0 1.6 0">
+        <a-camera look-controls="reverseMouseDrag: false">
+          <a-cursor
+            id="cursor"
+            animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1"
+            animation__fusing="property: scale; startEvents: fusing; easing: easeInCubic; dur: 1500; from: 1 1 1; to: 0.1 0.1 0.1"
+            animation__mouseleave="property: scale; startEvents: mouseleave; easing: easeInCubic; dur: 500; to: 1 1 1"
+            raycaster="objects: .clickable"
+            material="color: white; shader: flat"
+            position="0 0 -1"
+            geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+          ></a-cursor>
+        </a-camera>
+      </a-entity>
+
+      <!-- All Scenes with Navigation Points -->
+      <a-entity id="louvre-scene" visible="true">
+        <a-sky src="#louvre-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          id="next-scene-label"
+          value="Next"
+          position="6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="-6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          id="prev-scene-label"
+          value="Previous"
+          position="-6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+
+      <a-entity id="city-scene" visible="false">
+        <a-sky src="#city-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="-6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          value="Previous"
+          position="-6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          value="Next"
+          position="6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+
+      <a-entity id="lake-scene" visible="false">
+        <a-sky src="#lake-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="-6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          value="Previous"
+          position="-6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          value="Next"
+          position="6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+
+      <a-entity id="beach-scene" visible="false">
+        <a-sky src="#beach-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="-6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          value="Previous"
+          position="-6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          value="Next"
+          position="6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+
+      <a-entity id="canyon-scene" visible="false">
+        <a-sky src="#canyon-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="-6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          value="Previous"
+          position="-6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          value="Next"
+          position="6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+
+      <a-entity id="venice-scene" visible="false">
+        <a-sky src="#venice-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="-6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          value="Previous"
+          position="-6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          value="Next"
+          position="6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+
+      <a-entity id="radar-scene" visible="false">
+        <a-sky src="#radar-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="-6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          value="Previous"
+          position="-6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          value="Next"
+          position="6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+
+      <a-entity id="vineyard-scene" visible="false">
+        <a-sky src="#vineyard-img" rotation="0 -90 0"></a-sky>
+        <!-- Navigation Points -->
+        <a-sphere
+          class="clickable"
+          position="-6 -1 -6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToPreviousSceneInOrder()"
+        >
+        </a-sphere>
+        <a-text
+          value="Previous"
+          position="-6 0 -6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+        <a-sphere
+          class="clickable"
+          position="6 -1 6"
+          radius="0.5"
+          color="#4CC3D9"
+          opacity="0.7"
+          animation="property: scale; dir: alternate; dur: 1000; to: 1.2 1.2 1.2; loop: true"
+          event-set__mouseenter="material.opacity: 0.9; material.color: #F5A623"
+          event-set__mouseleave="material.opacity: 0.7; material.color: #4CC3D9"
+          onclick="goToNextScene()"
+        >
+        </a-sphere>
+        <a-text
+          value="Next"
+          position="6 0 6"
+          width="6"
+          align="center"
+          color="#FFF"
+        ></a-text>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
