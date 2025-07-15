@@ -32,12 +32,14 @@ Users can:
 ---
 ##  Author
 
-**Gift Onyinyechi Ahanonu**  
+**Gift Ahanonu**  
+
 📧 [giftahanonu@outlook.com](mailto:giftahanonu@outlook.com)  
 🔗 [LinkedIn Profile](https://www.linkedin.com/in/giftahanonu)
+
 ---
 
-> © 2025 Gift Onyinyechi Ahanonu — Open-source for learning and experimentation.
+> © 2025 Gift Ahanonu — Open-source for learning and experimentation.
 
 ```
 
