@@ -24,26 +24,22 @@ Users can:
 - Countryside Vineyard
 ---
 
-##  Author
-
-**Gift Onyinyechi Ahanonu**  
-📧 [giftahanonu@outlook.com](mailto:giftahanonu@outlook.com)  
-🔗 [LinkedIn Profile](https://www.linkedin.com/in/giftahanonu)
-
-
-
 <img width="1538" height="681" alt="image" src="https://github.com/user-attachments/assets/c9edef3e-ce16-45dc-97d1-807d03518bb3" />
 <img width="1536" height="677" alt="image" src="https://github.com/user-attachments/assets/de312fcc-33f6-43d1-b133-fce577fb4c6c" />
 <img width="1533" height="675" alt="image" src="https://github.com/user-attachments/assets/218b2ed1-ef10-4a66-a944-adb8c1b3b374" />
 <img width="1533" height="667" alt="image" src="https://github.com/user-attachments/assets/be9ab7ac-4263-440e-b5b4-b05dbf45d247" />
 
 ---
+##  Author
+
+**Gift Onyinyechi Ahanonu**  
+📧 [giftahanonu@outlook.com](mailto:giftahanonu@outlook.com)  
+🔗 [LinkedIn Profile](https://www.linkedin.com/in/giftahanonu)
+---
 
 > © 2025 Gift Onyinyechi Ahanonu — Open-source for learning and experimentation.
 
 ```
-
----
 
 
 
